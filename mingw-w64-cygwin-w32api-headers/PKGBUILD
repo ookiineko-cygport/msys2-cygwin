@@ -1,11 +1,13 @@
-pkgname=cygwin-w32api-headers
+pkgbase=mingw-w64-cygwin-w32api-headers
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-w32api-headers"
 pkgver=11.0.1
 pkgrel=1
 pkgdesc="Windows header files for the Cygwin cross toolchain"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="http://mingw-w64.sourceforge.net"
 license=('custom')
-groups=('cygwin-toolchain')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
 options=('!strip' '!libtool' '!emptydirs')
 source=("https://sourceforge.net/projects/mingw-w64/files/mingw-w64/mingw-w64-release/mingw-w64-v${pkgver}.tar.bz2")
 sha256sums=('3f66bce069ee8bed7439a1a13da7cb91a5e67ea6170f21317ac7f5794625ee10')
@@ -15,9 +17,9 @@ _targets="x86_64-pc-cygwin"
 build() {
   for _target in ${_targets}; do
     echo "Configuring ${_target} headers"
-    mkdir -p "$srcdir"/headers-${_target} && cd "$srcdir"/headers-${_target}
+    mkdir -p "$srcdir"/build-${MSYSTEM}-${_target} && cd "$srcdir"/build-${MSYSTEM}-${_target}
     ../mingw-w64-v${pkgver}/mingw-w64-headers/configure \
-        --prefix=/usr/${_target} --host=${_target} \
+        --prefix=${MINGW_PREFIX}/${_target} --host=${_target} \
         --enable-sdk=all --enable-w32api
   done
 }
@@ -25,7 +27,7 @@ build() {
 package() {
   for _target in ${_targets}; do
     echo "Installing ${_target} headers"
-    cd "$srcdir"/headers-${_target}
+    cd "$srcdir"/build-${MSYSTEM}-${_target}
     make DESTDIR="$pkgdir" install
   done
 
