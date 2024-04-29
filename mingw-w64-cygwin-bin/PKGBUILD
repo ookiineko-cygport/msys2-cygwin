@@ -1,14 +1,16 @@
 _realname=cygwin
-pkgname=cygwin-bin
+pkgbase=mingw-w64-cygwin-bin
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-bin"
 pkgver=3.5.3
 pkgrel=1
 pkgdesc="POSIX compatibility C runtime for Windows (bootstrap)"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://cygwin.com/"
 _mirror="https://mirrors.kernel.org/sourceware/cygwin"
 license=('GPL')
-provides=('cygwin')
-conflicts=('cygwin')
+provides=("${MINGW_PACKAGE_PREFIX}-cygwin")
+conflicts=("${MINGW_PACKAGE_PREFIX}-cygwin")
 options=('!strip' 'staticlibs' '!emptydirs')
 _rev=1
 source=("${_realname}-${pkgver}-${_rev}-x86_64.tar.xz::${_mirror}/x86_64/release/${_realname}/${_realname}-${pkgver}-${_rev}.tar.xz"
@@ -22,24 +24,24 @@ _targets="x86_64-pc-cygwin"
 package() {
   for _target in ${_targets}; do
     echo "Extracting ${_target} tarballs"
-    mkdir -p "$pkgdir"/usr/${_target}
-    tar -x -v -f "${_realname}-${pkgver}-${_rev}-${_target::-10}.tar.xz" -C "$pkgdir"/usr/${_target} --strip-components=1 --wildcards usr/\*
-    tar -x -v -f "${_realname}-devel-${pkgver}-${_rev}-${_target::-10}.tar.xz" -C "$pkgdir"/usr/${_target} --strip-components=1 --wildcards usr/\*
+    mkdir -p "${pkgdir}${MINGW_PREFIX}"/${_target}
+    tar -x -v -f "${_realname}-${pkgver}-${_rev}-${_target::-10}.tar.xz" -C "${pkgdir}${MINGW_PREFIX}"/${_target} --strip-components=1 --wildcards usr/\*
+    tar -x -v -f "${_realname}-devel-${pkgver}-${_rev}-${_target::-10}.tar.xz" -C "${pkgdir}${MINGW_PREFIX}"/${_target} --strip-components=1 --wildcards usr/\*
     # install licenses
-    if [[ ! -f "$pkgdir"/usr/share/licenses/${pkgname}/COPYING ]]; then
-      install -Dm644 "$pkgdir"/usr/${_target}/share/doc/Cygwin/COPYING \
+    if [[ ! -f "${pkgdir}${MINGW_PREFIX}"/share/licenses/${pkgname}/COPYING ]]; then
+      install -Dm644 "${pkgdir}${MINGW_PREFIX}"/${_target}/share/doc/Cygwin/COPYING \
           "$pkgdir"/usr/share/licenses/${pkgname}/COPYING
     fi
-    if [[ ! -f "$pkgdir"/usr/share/licenses/${pkgname}/CYGWIN_LICENSE ]]; then
-      install -Dm644 "$pkgdir"/usr/${_target}/share/doc/Cygwin/CYGWIN_LICENSE \
+    if [[ ! -f "${pkgdir}${MINGW_PREFIX}"/share/licenses/${pkgname}/CYGWIN_LICENSE ]]; then
+      install -Dm644 "${pkgdir}${MINGW_PREFIX}"/${_target}/share/doc/Cygwin/CYGWIN_LICENSE \
           "$pkgdir"/usr/share/licenses/${pkgname}/CYGWIN_LICENSE
     fi
     # remove unnecessary files
-    rm -rf "$pkgdir"/usr/${_target}/share/doc/
-    rm -rf "$pkgdir"/usr/${_target}/share/cygwin/
-    find "$pkgdir"/usr/${_target}/bin/ -type f ! -name \*.dll -delete
+    rm -rf "${pkgdir}${MINGW_PREFIX}"/${_target}/share/doc/
+    rm -rf "${pkgdir}${MINGW_PREFIX}"/${_target}/share/cygwin/
+    find "${pkgdir}${MINGW_PREFIX}"/${_target}/bin/ -type f ! -name \*.dll -delete
     # fixup file modes
-    find "$pkgdir"/usr/${_target}/ -mindepth 1 -type d -perm 775 -exec chmod 755 {} +
+    find "${pkgdir}${MINGW_PREFIX}"/${_target}/ -mindepth 1 -type d -perm 775 -exec chmod 755 {} +
   done
   # cleanup exes
   find "$pkgdir" -type f -name \*.exe -delete
