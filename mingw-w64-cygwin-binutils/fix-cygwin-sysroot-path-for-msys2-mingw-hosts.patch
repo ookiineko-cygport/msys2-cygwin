@@ -1,0 +1,27 @@
+--- binutils-2.42/ld/configure.tgt.orig	2024-04-30 21:28:16.210074100 +0800
++++ binutils-2.42/ld/configure.tgt	2024-04-30 21:28:39.346635900 +0800
+@@ -431,7 +431,6 @@
+ 			;;
+ i[3-7]86-*-cygwin*)	targ_emul=i386pe ;
+ 			targ_extra_ofiles="deffilep.o pdb.o pe-dll.o" ;
+-			test "$targ" != "$host" && LIB_PATH='${tooldir}/lib/w32api'
+ 			;;
+ i[3-7]86-*-mingw32*)	targ_emul=i386pe ;
+ 			targ_extra_ofiles="deffilep.o pdb.o pe-dll.o"
+@@ -1063,7 +1062,6 @@
+ x86_64-*-cygwin)	targ_emul=i386pep ;
+ 			targ_extra_emuls=i386pe
+ 			targ_extra_ofiles="deffilep.o pdb.o pep-dll.o pe-dll.o"
+-			test "$targ" != "$host" && LIB_PATH='${tooldir}/lib/w32api'
+ 			;;
+ x86_64-*-mingw*)	targ_emul=i386pep ;
+ 			targ_extra_emuls=i386pe
+@@ -1146,7 +1144,7 @@
+   ;;
+ 
+ i[03-9x]86-*-cygwin* | x86_64-*-cygwin*)
+-  NATIVE_LIB_DIRS='/usr/lib /usr/lib/w32api'
++  NATIVE_LIB_DIRS='/lib /lib/w32api /usr/lib /usr/lib/w32api'
+   ;;
+ 
+ *-*-linux*)

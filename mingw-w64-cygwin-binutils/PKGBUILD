@@ -1,17 +1,37 @@
-pkgname=cygwin-binutils
+pkgbase=mingw-w64-cygwin-binutils
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-binutils"
 pkgver=2.42
 pkgrel=2
 pkgdesc="Cross binutils for the Cygwin cross-compiler"
-arch=('x86_64')
+arch=('any')
+mingw_arch=('mingw64')
 url="http://www.gnu.org/software/binutils"
+msys2_references=('cpe: cpe:/a:gnu:binutils')
 license=('GPL')
-groups=('cygwin-toolchain')
-depends=('glibc' 'libelf' 'zlib' 'zstd' 'msgpack-c')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-libwinpthread"
+         "${MINGW_PACKAGE_PREFIX}-zlib"
+         "${MINGW_PACKAGE_PREFIX}-zstd"
+         "${MINGW_PACKAGE_PREFIX}-msgpack-c")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-autotools")
 options=('!libtool' '!emptydirs')
 source=("https://ftp.gnu.org/gnu/binutils/binutils-${pkgver}.tar.gz"
-        cygwin-config-rpath.patch)
+        cygwin-config-rpath.patch
+        mingw-0002-check-for-unusual-file-harder.patch
+        mingw-0110-binutils-mingw-gnu-print.patch
+        mingw-2003-Restore-old-behaviour-of-windres-so-that-options-con.patch
+        mingw-libiberty-unlink-handle-windows-nul.patch
+        mingw-3001-hack-libiberty-link-order.patch
+        fix-cygwin-sysroot-path-for-msys2-mingw-hosts.patch)
 sha512sums=('1e4ee462513eadd3c540e4782f9661df62ecbcd4d6297d61dcc0845ae7d30243c57571787706af3bb4d561e4350609d7057307290e81d76290a301f159a6abc5'
-            'd3459d1390f3d0691fbb27da0aa37e43ef664e39e8fbfcee23aab84ad1a3016a5ad90e2f98d1901a3384604e309bdb787cadcdd6f935563075b5a7c6e39f74a5')
+            'd3459d1390f3d0691fbb27da0aa37e43ef664e39e8fbfcee23aab84ad1a3016a5ad90e2f98d1901a3384604e309bdb787cadcdd6f935563075b5a7c6e39f74a5'
+            '455ed781d9a7047f073b1f3ad1cb12f279d0f70a7c1efdf711279e15199cbdaefaa9e556635d5a193108f03c9a209f836030b0d2f3719bb0e1ce36bcb95b5ef0'
+            '0816d8455df62a5a53cda30772baf1b9aaa146adc5c2c336d3692f8725608c18366b761d18548cf677632d11e5a0083c1b1e2f941e2eece43ce1b7f979eb1d0f'
+            'af49260dec87e9a970d16907ddd2861a4f136ccacb4678731633caff5a3329ca148648d7bea7696308e5d6bd7e49c5bce327e7276c1a4f228fb72f1339cdb836'
+            'e787a70139b5a736b2ad6b3c4b9dee946af81bc235ac436b0a2c8b0a874c02e1d8ee6d11d57f50366bd2aa51ecaab55c2a5f8601390e5c4d0412ca26fe787923'
+            'a6dccd7fdf00cff6466f9cb42b4c1e427e3db123c32a7c0db1328a2a9b6dfa7848d894746aad8d93408c0c78d7ff643b338a2535204f05e384fad735175606c0'
+            'bb3d3783c5c23dca0ffddb72f8faee29d7981c36ad85797848d865d344bed2b1851f1f04871fe2af8f3f28c7200efc378de7c38822f5a8702b102c57975abffc')
 
 _targets="x86_64-pc-cygwin"
 
@@ -21,15 +41,39 @@ prepare() {
   sed -i 's/install_to_$(INSTALL_DEST) //' libiberty/Makefile.in
 
   patch -Np2 -i ../cygwin-config-rpath.patch
+
+  patch -Np1 -i ../mingw-0002-check-for-unusual-file-harder.patch
+  patch -Np1 -i ../mingw-0110-binutils-mingw-gnu-print.patch
+
+  # https://github.com/msys2/MINGW-packages/pull/9233#issuecomment-889439433
+  patch -Rp1 -i ../mingw-2003-Restore-old-behaviour-of-windres-so-that-options-con.patch
+
+  # Handle Windows nul device
+  # https://github.com/msys2/MINGW-packages/issues/1840
+  # https://github.com/msys2/MINGW-packages/issues/10520
+  # https://github.com/msys2/MINGW-packages/issues/14725
+
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108276
+  # https://gcc.gnu.org/pipermail/gcc-patches/2023-January/609487.html
+  patch -Np1 -i ../mingw-libiberty-unlink-handle-windows-nul.patch
+
+  # XXX: make sure we link against the just built libiberty, not the system one
+  # to avoid a linker error. All the ld deps contain system deps and system
+  # search paths, so imho if things link against the system lib or the just
+  # built one is just luck, and I don't know how that is supposed to work.
+  patch -Np1 -i ../mingw-3001-hack-libiberty-link-order.patch
+
+  patch -Np1 -i ../fix-cygwin-sysroot-path-for-msys2-mingw-hosts.patch
 }
 
 build() {
   for _target in $_targets; do
     echo "Building ${_target} cross binutils"
-    mkdir -p "$srcdir"/binutils-${_target} && cd "$srcdir"/binutils-${_target}
-    ../binutils-${pkgver}/configure --prefix=/usr \
+    mkdir -p "$srcdir"/build-${MSYSTEM}-${_target} && cd "$srcdir"/build-${MSYSTEM}-${_target}
+    ../binutils-${pkgver}/configure --prefix=${MINGW_PREFIX} \
         --target=${_target} \
-        --infodir=/usr/share/info/${_target} \
+        --with-sysroot=${MINGW_PREFIX}/${_target} \
+        --infodir=${MINGW_PREFIX}/share/info/${_target} \
         --enable-lto --enable-plugins \
         --enable-deterministic-archives \
         --disable-multilib --disable-nls \
@@ -41,9 +85,9 @@ build() {
 package() {
   for _target in ${_targets}; do
     echo "Installing ${_target} cross binutils"
-    cd "$srcdir"/binutils-${_target}
+    cd "$srcdir"/build-${MSYSTEM}-${_target}
     make DESTDIR="$pkgdir" install
 
-    rm "$pkgdir"/usr/lib/bfd-plugins/libdep.so
+    rm "${pkgdir}${MINGW_PREFIX}"/lib/bfd-plugins/libdep.dll
   done
 }
