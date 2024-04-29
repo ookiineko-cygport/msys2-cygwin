@@ -1,14 +1,24 @@
-pkgname=cygwin-gcc
+pkgbase=mingw-w64-cygwin-gcc
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
 pkgver=11.4.0
 pkgrel=1
 pkgdesc="Cross GCC for the Cygwin cross-compiler"
-arch=('x86_64')
+arch=('any')
+mingw_arch=('mingw64')
 url="https://gcc.gnu.org"
+msys2_references=('cpe: cpe:/a:gnu:gcc')
 license=('GPL' 'LGPL' 'FDL' 'custom')
-groups=('cygwin-toolchain')
-depends=('zlib' 'libisl' 'libmpc'
-         'cygwin' 'cygwin-binutils' 'cygwin-default-manifest'
-         'cygwin-w32api-runtime' 'cygwin-w32api-headers')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-zlib"
+         "${MINGW_PACKAGE_PREFIX}-isl"
+         "${MINGW_PACKAGE_PREFIX}-mpc"
+         "${MINGW_PACKAGE_PREFIX}-cygwin"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-binutils"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-default-manifest"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-w32api-runtime"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-w32api-headers")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-autotools")
 options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
 source=("https://ftp.gnu.org/gnu/gcc/gcc-${pkgver}/gcc-${pkgver}.tar.xz"
         cygwin-sysv-abi.patch
@@ -18,7 +28,13 @@ source=("https://ftp.gnu.org/gnu/gcc/gcc-${pkgver}/gcc-${pkgver}.tar.xz"
         cygwin-__cxa-atexit.patch
         cygwin-libgomp-soname.patch
         cygwin-libstdcxx-config.patch
-        cygwin-newlib-ftm.patch)
+        cygwin-newlib-ftm.patch
+        mingw-0002-Relocate-libintl.patch
+        mingw-0003-Windows-Follow-Posix-dir-exists-semantics-more-close.patch
+        mingw-0004-Windows-Use-not-in-progpath-and-leave-case-as-is.patch
+        mingw-0010-Fix-using-large-PCH.patch
+        mingw-0012-Handle-spaces-in-path-for-default-manifest.patch
+        mingw-0140-gcc-8.2.0-diagnostic-color.patch)
 sha256sums=('3f2db222b007e8a4a23cd5ba56726ef08e8b1f1eb2055ee72c1402cea73a8dd9'
             'bc788aa466a83184d285cc2f6c1ffc40c6ed416dd08c6999015262a53f1ab1b5'
             'b1674c929fdb5edc03c32175efcc2bcd6c30368a53bcb50a2188cacf2b53fe9d'
@@ -27,15 +43,23 @@ sha256sums=('3f2db222b007e8a4a23cd5ba56726ef08e8b1f1eb2055ee72c1402cea73a8dd9'
             '4bb1afde0efc679271ef058c7a123a713cd2a6933a6877845859bee72a16e98a'
             'd873b5f370a039f2e737e8a9f44414c267697cc6371e1ae3e4eed0c15c09e6ee'
             '22d297befb94df80b46262084341961d54bcfcaf83bba4af24380cfbf93a8ff9'
-            '2658eb376f7829179963978b69a048ed105a41508adc55d0fc0d607c14181926')
+            '2658eb376f7829179963978b69a048ed105a41508adc55d0fc0d607c14181926'
+            '1247e81571c908548b4d9aaa3df1ad8fd73aad7b81e7eafea12d53bbada70e94'
+            '5b8ab5a54ebdd10c9802ea431b935ff4ba225eec6ca92824cfddfcf2ee8ac910'
+            '388f423a67e4be6f547ca7e340ff8ee4c78b1ed83f3fd698daa409e309911807'
+            'ec58aafba0174313451c282339bbd67ed0b11bca034c29023e0138b61441cf71'
+            '11dd5388a1e1c0a2bc8bc3824726598784b9b9e0896a3d77950ba6a4569f1128'
+            '5240a9e731b45c17a164066c7eb193c1fbee9fd8d9a2a5afa2edbcde9510da47')
 
 _targets="x86_64-pc-cygwin"
 
 prepare() {
-  ln -sf gcc-${pkgver/+/-} gcc
-  cd gcc
+  cd gcc-${pkgver}
+
   # remove files created by patch
-  rm -f libgomp/config/cygwin/plugin-suffix.h
+  rm -f libgomp/config/cygwin/plugin-suffix.h \
+    intl/canonicalize.c intl/canonicalize.h \
+    intl/relocatex.c intl/relocatex.h
 
   patch -p1 -i ../cygwin-sysv-abi.patch
   patch -p1 -i ../cygwin-driver.patch
@@ -48,6 +72,16 @@ prepare() {
 
   # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
   sed -i 's|\-Werror||g' libbacktrace/configure
+
+  patch -p1 -i ../mingw-0002-Relocate-libintl.patch
+  patch -p1 -i ../mingw-0003-Windows-Follow-Posix-dir-exists-semantics-more-close.patch
+  patch -p1 -i ../mingw-0004-Windows-Use-not-in-progpath-and-leave-case-as-is.patch
+  patch -p1 -i ../mingw-0010-Fix-using-large-PCH.patch
+  patch -p1 -i ../mingw-0012-Handle-spaces-in-path-for-default-manifest.patch
+
+  # Enable diagnostic color under mintty
+  # Вячеслав Петрищев <vyachemail@gmail.com>
+  patch -p1 -i ../mingw-0140-gcc-8.2.0-diagnostic-color.patch
 }
 
 build() {
@@ -56,10 +90,10 @@ build() {
 
   for _target in ${_targets}; do
     echo "Building ${_target} cross gcc"
-    mkdir -p "$srcdir"/build-${_target} && cd "$srcdir"/build-${_target}
-    ../gcc/configure --prefix=/usr --libexecdir=/usr/lib \
+    mkdir -p "$srcdir"/build-${MSYSTEM}-${_target} && cd "$srcdir"/build-${MSYSTEM}-${_target}
+    ../gcc-${pkgver}/configure --prefix=${MINGW_PREFIX} --libexecdir=${MINGW_PREFIX}/lib \
         --target=${_target} \
-        --with-bugurl=https://github.com/ookiineko-cygport/arch-cygwin/ \
+        --with-bugurl=https://github.com/ookiineko-cygport/msys2-cygwin/ \
         --enable-languages=c,c++,lto \
         --enable-shared --enable-static \
         --enable-threads=posix --enable-__cxa_atexit \
@@ -77,21 +111,21 @@ build() {
 package() {
   for _target in ${_targets}; do
     echo "Installing ${_target} cross gcc"
-    cd "$srcdir"/build-${_target}
+    cd "$srcdir"/build-${MSYSTEM}-${_target}
     make DESTDIR="$pkgdir" install
-    ${_target}-strip "$pkgdir"/usr/${_target}/lib/*.dll
-    strip "$pkgdir"/usr/bin/${_target}-*
-    strip "$pkgdir"/usr/lib/gcc/${_target}/${pkgver}/{cc1*,collect2,lto*}
-    ln -s ${_target}-gcc "$pkgdir"/usr/bin/${_target}-cc
+    ${_target}-strip "${pkgdir}${MINGW_PREFIX}"/${_target}/lib/*.dll
+    strip "${pkgdir}${MINGW_PREFIX}"/bin/${_target}-*.exe
+    strip "${pkgdir}${MINGW_PREFIX}"/lib/gcc/${_target}/${pkgver}/{cc1*,collect2,lto*}.exe
+    ln -s ${_target}-gcc "${pkgdir}${MINGW_PREFIX}"/bin/${_target}-cc.exe
     # mv dlls
-    mkdir -p "$pkgdir"/usr/${_target}/bin/
-    mv "$pkgdir"/usr/${_target}/lib/*.dll "$pkgdir"/usr/${_target}/bin/
+    mkdir -p "${pkgdir}${MINGW_PREFIX}"/${_target}/bin/
+    mv "${pkgdir}${MINGW_PREFIX}"/${_target}/lib/*.dll "${pkgdir}${MINGW_PREFIX}"/${_target}/bin/
     # clean-up include-fixed
-    mv "$pkgdir"/usr/lib/gcc/${_target}/${pkgver}/include-fixed/*limits.h \
-       "$pkgdir"/usr/lib/gcc/${_target}/${pkgver}/include/
+    mv "${pkgdir}${MINGW_PREFIX}"/lib/gcc/${_target}/${pkgver}/include-fixed/*limits.h \
+       "${pkgdir}${MINGW_PREFIX}"/lib/gcc/${_target}/${pkgver}/include/
   done
-  strip "$pkgdir"/usr/bin/*
+  strip "${pkgdir}${MINGW_PREFIX}"/bin/*.exe
   # remove unnecessary files
-  rm -r "$pkgdir"/usr/share
-  rm "$pkgdir"/usr/lib/libcc1.*
+  rm -r "${pkgdir}${MINGW_PREFIX}"/share
+  #rm "${pkgdir}${MINGW_PREFIX}"/lib/libcc1.*
 }
