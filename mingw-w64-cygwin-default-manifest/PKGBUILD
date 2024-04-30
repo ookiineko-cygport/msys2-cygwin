@@ -1,12 +1,15 @@
-pkgname=cygwin-default-manifest
+pkgbase=mingw-w64-cygwin-default-manifest
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-default-manifest"
 pkgver=6.4
 pkgrel=1
 pkgdesc="Default application manifest for the Cygwin cross toolchain"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://cygwin.com/"
 license=('BSD')
-groups=('cygwin-toolchain')
-makedepends=('cygwin-gcc' 'cygwin-binutils')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-binutils")
 source=("git+https://cygwin.com/git/cygwin-apps/windows-default-manifest#tag=release-${pkgver//\./_}")
 md5sums=('SKIP')
 
@@ -20,9 +23,9 @@ prepare() {
 build() {
   for _target in ${_targets}; do
     echo "Building for ${_target}"
-    mkdir -p "$srcdir"/build-${_target} && cd "$srcdir"/build-${_target}
+    mkdir -p "$srcdir"/build-${MSYSTEM}-${_target} && cd "$srcdir"/build-${MSYSTEM}-${_target}
     ../windows-default-manifest/configure \
-        --prefix=/usr/${_target} --host=${_target}
+        --prefix=${MINGW_PREFIX}/${_target} --host=${_target}
     make
   done
 }
@@ -30,7 +33,7 @@ build() {
 package() {
   for _target in ${_targets}; do
     echo "Installing for ${_target}"
-    cd "$srcdir"/build-${_target}
-    make DESTDIR="$pkgdir" tooldir=/usr/${_target} install
+    cd "$srcdir"/build-${MSYSTEM}-${_target}
+    make DESTDIR="$pkgdir" tooldir=${MINGW_PREFIX}/${_target} install
   done
 }
