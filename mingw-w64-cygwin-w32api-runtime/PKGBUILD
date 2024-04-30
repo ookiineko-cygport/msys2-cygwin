@@ -1,13 +1,21 @@
-pkgname=cygwin-w32api-runtime
+pkgbase=mingw-w64-cygwin-w32api-runtime
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-w32api-runtime"
 pkgver=11.0.1
 pkgrel=1
 pkgdesc="Windows API libraries for the Cygwin cross toolchain"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="http://mingw-w64.sourceforge.net"
 license=('custom')
-groups=('cygwin-toolchain')
-makedepends=('cygwin-gcc' 'cygwin-binutils' "cygwin-w32api-headers=${pkgver}")
+groups=("mingw-w64-cygwin-toolchain")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-binutils"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-w32api-headers=${pkgver}")
 options=('!strip' '!buildflags' 'staticlibs' '!emptydirs')
+# XXX: MSYS2 sets these in /etc/makepkg_mingw.conf
+unset CC CXX
+# XXX: MSYS2 might set these in /etc/profile
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH
 source=("https://sourceforge.net/projects/mingw-w64/files/mingw-w64/mingw-w64-release/mingw-w64-v${pkgver}.tar.bz2")
 sha256sums=('3f66bce069ee8bed7439a1a13da7cb91a5e67ea6170f21317ac7f5794625ee10')
 
@@ -20,8 +28,8 @@ build() {
     if [ ${_target} == "x86_64-pc-cygwin" ]; then
         _configure_args="--disable-lib32 --enable-lib64"
     fi
-    mkdir -p "$srcdir"/build-${_target} && cd "$srcdir"/build-${_target}
-    ../mingw-w64-v${pkgver}/mingw-w64-crt/configure --prefix=/usr/${_target} \
+    mkdir -p "$srcdir"/build-${MSYSTEM}-${_target} && cd "$srcdir"/build-${MSYSTEM}-${_target}
+    ../mingw-w64-v${pkgver}/mingw-w64-crt/configure --prefix=${MINGW_PREFIX}/${_target} \
         --host=${_target} --enable-w32api \
         ${_configure_args}
     make
@@ -31,7 +39,7 @@ build() {
 package() {
   for _target in ${_targets}; do
     echo "Installing for ${_target}"
-    cd "$srcdir"/build-${_target}
+    cd "$srcdir"/build-${MSYSTEM}-${_target}
     make DESTDIR="$pkgdir" install
   done
 }
