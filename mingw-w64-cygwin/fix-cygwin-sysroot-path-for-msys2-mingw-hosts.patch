@@ -1,0 +1,10 @@
+--- newlib-cygwin/winsup/cygwin/cygwin.sc.in.orig	2024-05-01 15:55:35.645780800 +0800
++++ newlib-cygwin/winsup/cygwin/cygwin.sc.in	2024-05-01 15:55:49.524219500 +0800
+@@ -1,6 +1,6 @@
+ #ifdef __x86_64__
+ OUTPUT_FORMAT(pei-x86-64)
+-SEARCH_DIR("/usr/x86_64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
++SEARCH_DIR("/usr/x86_64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+ #else
+ #error unimplemented for this target
+ #endif

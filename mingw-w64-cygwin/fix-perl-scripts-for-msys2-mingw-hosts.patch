@@ -1,0 +1,81 @@
+From b44c4cef3da86334a208ec8a6a2dcbace555501b Mon Sep 17 00:00:00 2001
+From: Ookiineko <chiisaineko@protonmail.com>
+Date: Thu, 2 May 2024 17:13:39 +0800
+Subject: [PATCH] Cygwin: make some perl build scripts work on MinGW host
+
+Signed-off-by: Ookiineko <chiisaineko@protonmail.com>
+---
+ winsup/cygwin/scripts/mkimport | 18 ++++++++++++++----
+ winsup/cygwin/scripts/speclib  | 11 ++++++++---
+ 2 files changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/winsup/cygwin/scripts/mkimport b/winsup/cygwin/scripts/mkimport
+index 9517c4e9e..cf27725e0 100755
+--- a/winsup/cygwin/scripts/mkimport
++++ b/winsup/cygwin/scripts/mkimport
+@@ -1,4 +1,4 @@
+-#!/usr/bin/perl
++#!/usr/bin/env perl
+ use strict;
+ use File::Temp qw'tempdir';
+ use File::Spec;
+@@ -29,8 +29,15 @@ my $sym_prefix = '';
+ 
+ while (<$nm_fd>) {
+     chomp;
+-    my ($fn, $type, $sym) = /^$inpdll:(.*?):\S+\s+(\S)\s+(\S+)$/o;
+-    next unless $fn;
++    my ($fn, $type, $sym);
++    if ($^O eq "MSWin32") {
++      my $name;
++      ($name, $fn, $type, $sym) = /^(.+:.*):(.*?):\S+\s+(\S)\s+(\S+)$/o;
++      next unless (stat($name))[1] eq (stat($inpdll))[1];
++    } else {
++      ($fn, $type, $sym) = /^$inpdll:(.*?):\S+\s+(\S)\s+(\S+)$/o;
++      next unless $fn;
++    }
+     $text{$fn} = $sym if $type eq 'T';
+     $import{$fn} = $sym if $type eq 'I';
+     $symfile{$sym} = $fn;
+@@ -97,7 +104,10 @@ my $opts = 'crs';
+ $opts .= 'D' if ($ENV{'SOURCE_DATE_EPOCH'} != '');
+ 
+ unlink $libdll;
+-system $ar, $opts, $libdll, glob('*.o'), @ARGV;
++open my $obj_list, '>', 'objs.list';
++print $obj_list join(' ', glob('*.o'));
++close $obj_list;
++system $ar, $opts, $libdll, "\@objs.list", @ARGV;
+ unlink glob('*.o');
+ exit 1 if $?;
+ 
+diff --git a/winsup/cygwin/scripts/speclib b/winsup/cygwin/scripts/speclib
+index 41a3a8e13..bd1c452d0 100755
+--- a/winsup/cygwin/scripts/speclib
++++ b/winsup/cygwin/scripts/speclib
+@@ -1,4 +1,4 @@
+-#!/usr/bin/perl
++#!/usr/bin/env perl
+ use Getopt::Long;
+ use File::Temp qw'tempdir';
+ use File::Basename;
+@@ -39,9 +39,14 @@ while (<$nm_fd>) {
+     if (/ I _?(.*)_dll_iname/o) {
+ 	$dllname = $1;
+     } else {
+-	my ($file, $member, $symbol) = m%^([^:]*):([^:]*(?=:))?.* T (.*)%o;
++	my ($file, $member, $symbol);
++	if ($^O eq "MSWin32") {
++		($file, $member, $symbol) = m%^([^:]+:?[^:]*):([^:]*(?=:))?.* T (.*)%o;
++	} else {
++		($file, $member, $symbol) = m%^([^:]*):([^:]*(?=:))?.* T (.*)%o;
++	}
+ 	next if !defined($symbol) || $symbol =~ $exclude_regex;
+-	if ($file ne $libdll) {
++	if ((stat($file))[1] ne (stat($libdll))[1]) {
+ 	     $match_syms{$symbol} = 1;
+ 	 } elsif ($match_syms{$symbol} ? !$inverse : $inverse) {
+ 	     $extract{$member} = 1;
+-- 
+2.44.0
+
