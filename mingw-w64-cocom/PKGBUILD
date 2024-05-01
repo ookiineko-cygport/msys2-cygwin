@@ -1,29 +1,49 @@
-pkgname=cocom
+_realname=cocom
+pkgbase=mingw-w64-cocom
+pkgname="${MINGW_PACKAGE_PREFIX}-cocom"
 pkgver=0.996
 pkgrel=1
-pkgdesc="Toolset for creation of compilers and interpreters"
-arch=('x86_64')
+pkgdesc="Toolset for creation of compilers and interpreters (mingw-w64)"
+arch=('any')
+mingw_arch=('mingw64')
 url="https://cocom.sourceforge.io/"
 license=('custom')
-source=("https://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.tar.gz")
-sha256sums=('e143ab556d79a35ef31ec1e240897c9b8a8d0b6693e50a2b6e47d7fd4b200519')
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-autotools")
+source=("https://downloads.sourceforge.net/sourceforge/${_realname}/${_realname}-${pkgver}.tar.gz"
+        mingw-fixes.patch)
+sha256sums=('e143ab556d79a35ef31ec1e240897c9b8a8d0b6693e50a2b6e47d7fd4b200519'
+            'c63e4e0c42ec69c06054a65db5dddc586625d6ae49d623906cd93a19d0d9d5c6')
 
 prepare() {
+  cd "$srcdir"/cocom-${pkgver}
+
+  # HACK: disable socket support module
+  echo 'void *socket_address(...) { return (void *)0; }' > DINO/socket_int.c
+
+  patch -Np1 -i ../mingw-fixes.patch
+
   # top-level configure is 2.5x, but REGEX/configure is 2.13
-  cd "$srcdir"/${pkgname}-${pkgver}/REGEX
-  autoreconf -fi
+  cd REGEX
+  autoreconf-2.72 -fi
 }
 
 build() {
   export CFLAGS+=" -Wno-error=format-security"
   export CXXFLAGS+=" -Wno-error=format-security"
 
-  cd "$srcdir"/${pkgname}-${pkgver}
-  ./configure --prefix=/usr --mandir=/usr/share/man
+  mkdir -p "$srcdir"/build-${MSYSTEM} && cd "$srcdir"/build-${MSYSTEM}
+  ../cocom-${pkgver}/configure --prefix=${MINGW_PREFIX}/lib/cocom --mandir=${MINGW_PREFIX}/share/man
   make
 }
 
 package() {
-  cd "$srcdir"/${pkgname}-${pkgver}
+  cd "$srcdir"/build-${MSYSTEM}
   make DESTDIR="$pkgdir" install
+
+  # make tools available in PATH
+  mkdir -p "${pkgdir}${MINGW_PREFIX}"/bin/
+  for _tool in "${pkgdir}${MINGW_PREFIX}"/lib/cocom/bin/*.exe; do
+    ln -s "$_tool" "${pkgdir}${MINGW_PREFIX}"/bin/$(basename "$_tool")
+  done
 }
