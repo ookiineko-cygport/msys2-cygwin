@@ -1,14 +1,23 @@
-pkgname=cygwin-compiler-rt
+pkgbase=mingw-w64-cygwin-compiler-rt
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-compiler-rt"
 pkgver=15.0.7
 pkgrel=2
 pkgdesc="Compiler runtime libraries for clang (Cygwin) (experimental)"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://compiler-rt.llvm.org/"
+msys2_references=('cpe: cpe:/a:llvm:llvm')
 license=('custom:Apache 2.0 with LLVM Exception')
-groups=('cygwin-toolchain')
-makedepends=('cygwin-xclang' 'cygwin-cmake' 'ninja')
-optdepends=('cygwin-llvm-libunwind: for linking libunwind')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-xclang"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-cmake"
+             "${MINGW_PACKAGE_PREFIX}-ninja")
+optdepends=("${MINGW_PACKAGE_PREFIX}-cygwin-llvm-libunwind: for linking libunwind")
 options=('!strip' 'staticlibs' '!buildflags')
+# XXX: MSYS2 sets these in /etc/makepkg_mingw.conf
+unset CC CXX
+# XXX: MSYS2 might set these in /etc/profile
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH
 source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/compiler-rt-${pkgver}.src.tar.xz"
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/cmake-${pkgver}.src.tar.xz"
         cygwin.patch
@@ -25,9 +34,11 @@ sha256sums=('353832c66cce60931ea0413b3c071faad59eefa70d02c97daa8978b15e4b25b7'
 _targets="x86_64-pc-cygwin"
 
 prepare() {
-  ln -sf cmake-${pkgver}.src cmake
+  [[ -e cmake ]] && rm -rf cmake
+  mv cmake-${pkgver}.src cmake
 
-  ln -sf "$(/opt/cygwin-llvm/bin/llvm-config --src-root)" llvm
+  echo 'Symlinking LLVM source tree'
+  ln -sf "$(${MINGW_PREFIX}/lib/cygwin-llvm/bin/llvm-config.exe --src-root)" llvm
 
   cd compiler-rt-${pkgver}.src
   patch -p2 -i ../cygwin.patch
@@ -41,26 +52,27 @@ build () {
   for _target in ${_targets}; do
     echo "Building for ${_target}"
 
-    export CYGWIN_CC=${_target}-clang CYGWIN_CXX=${_target}-clang++
-    mkdir -p "$srcdir"/build-${_target}
-    ${_target}-cmake -B "$srcdir"/build-${_target} -G Ninja \
+    export CYGWIN_CC=${_target}-clang.bat CYGWIN_CXX=${_target}-clang++.bat
+    mkdir -p "$srcdir"/build-${MSYSTEM}-${_target}
+    MSYS2_ARG_CONV_EXCL='-DCMAKE_INSTALL_PREFIX=;-DCOMPILER_RT_INSTALL_PATH=' \
+    ${_target}-cmake -B "$srcdir"/build-${MSYSTEM}-${_target} -G Ninja \
                      -DCMAKE_BUILD_TYPE=Release \
-                     -DCMAKE_INSTALL_PREFIX=/opt/cygwin-llvm \
+                     -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX}/lib/cygwin-llvm \
                      -DCMAKE_SKIP_RPATH=ON \
-                     -DLLVM_CONFIG_PATH=../llvm/build/bin/llvm-config \
-                     -DCOMPILER_RT_INSTALL_PATH=/opt/cygwin-llvm/lib/clang/${pkgver} \
+                     -DLLVM_CONFIG_PATH=../llvm/build-${MSYSTEM}/bin/llvm-config.exe \
+                     -DCOMPILER_RT_INSTALL_PATH=${MINGW_PREFIX}/lib/cygwin-llvm/lib/clang/${pkgver} \
                      -DCOMPILER_RT_BUILD_ORC=OFF \
                      -DCOMPILER_RT_BUILD_XRAY=OFF \
                      -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
                      -DCOMPILER_RT_INCLUDE_TESTS=OFF
-    ninja -C "$srcdir"/build-${_target}
+    ninja -C "$srcdir"/build-${MSYSTEM}-${_target}
   done
 }
 
 package() {
   for _target in ${_targets}; do
     echo "Installing for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/build-${_target} install
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/build-${MSYSTEM}-${_target} install
   done
 
   cd compiler-rt-${pkgver}.src
