@@ -1,14 +1,24 @@
-pkgbase=cygwin-libc++
-pkgname=(cygwin-libc++ cygwin-libc++abi cygwin-llvm-libunwind)
+pkgbase=mingw-w64-cygwin-libc++
+pkgname=("${MINGW_PACKAGE_PREFIX}-cygwin-libc++"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-libc++abi"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-llvm-libunwind")
 pkgver=15.0.7
 pkgrel=1
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://github.com/llvm/llvm-project/tree/main/libunwind"
+msys2_references=('cpe: cpe:/a:llvm:llvm')
 license=('custom:Apache 2.0 with LLVM Exception')
-groups=('cygwin-toolchain')
-depends=('cygwin-compiler-rt')
-makedepends=('cygwin-xclang' 'cygwin-cmake' 'ninja')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-cygwin-compiler-rt")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-xclang"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-cmake"
+             "${MINGW_PACKAGE_PREFIX}-ninja")
 options=('!strip' 'staticlibs' '!buildflags')
+# XXX: MSYS2 sets these in /etc/makepkg_mingw.conf
+unset CC CXX
+# XXX: MSYS2 might set these in /etc/profile
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH
 source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/libcxx-${pkgver}.src.tar.xz"
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/libcxxabi-${pkgver}.src.tar.xz"
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/libunwind-${pkgver}.src.tar.xz"
@@ -31,6 +41,7 @@ source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver
         libunwind-cygwin-registers.patch
         libunwind-cygwin-seh.patch
         libunwind-cygwin-alignment.patch)
+noextract=("libcxx-${pkgver}.src.tar.xz")
 sha256sums=('8d4eaff1cb6e41439fbf3ededb46998a0a3564d66dd289f661bdd459c9277c11'
             '9b42f3951d845232e4cd58a0a9841838292dac138af19d4f8d0c08bd41004f43'
             '406d199ae3a16add84017f40458a5e7c31f9412937fcb518715af0a0eeafbc0c'
@@ -57,10 +68,18 @@ sha256sums=('8d4eaff1cb6e41439fbf3ededb46998a0a3564d66dd289f661bdd459c9277c11'
 _targets="x86_64-pc-cygwin"
 
 prepare() {
-  ln -sf libcxx-${pkgver}.src libcxx
-  ln -sf libcxxabi-${pkgver}.src libcxxabi
-  ln -sf libunwind-${pkgver}.src libunwind
-  ln -sf cmake-${pkgver}.src cmake
+  echo 'Extracting libcxx tarball'
+  MSYS=winsymlinks:native \
+  tar -xf libcxx-${pkgver}.src.tar.xz
+
+  [[ -e libcxx ]] && rm -rf libcxx
+  [[ -e libcxxabi ]] && rm -rf libcxxabi
+  [[ -e libunwind ]] && rm -rf libunwind
+  [[ -e cmake ]] && rm -rf cmake
+  mv libcxx-${pkgver}.src libcxx
+  mv libcxxabi-${pkgver}.src libcxxabi
+  mv libunwind-${pkgver}.src libunwind
+  mv cmake-${pkgver}.src cmake
 
   pushd libcxx
   patch -p2 -i ../libcxx-cygming-dllexport.patch
@@ -90,7 +109,8 @@ prepare() {
   rm -rf runtimes && mkdir -p runtimes
   mv CMakeLists.txt Components.cmake.in runtimes/
 
-  ln -sf "$(/opt/cygwin-llvm/bin/llvm-config --src-root)" llvm
+  echo 'Symlinking LLVM source tree'
+  ln -sf "$(${MINGW_PREFIX}/lib/cygwin-llvm/bin/llvm-config.exe --src-root)" llvm
 }
 
 build() {
@@ -109,28 +129,30 @@ build() {
 
   cd runtimes
   for _target in ${_targets}; do
-    export CYGWIN_CC=${_target}-clang CYGWIN_CXX=${_target}-clang++
-    mkdir -p "$srcdir"/{static,shared}-${_target}
+    export CYGWIN_CC=${_target}-clang.bat CYGWIN_CXX=${_target}-clang++.bat
+    mkdir -p "$srcdir"/${MSYSTEM}-{static,shared}-${_target}
 
     echo "Building static libs for ${_target}"
 
-    ${_target}-cmake -B "$srcdir"/static-${_target} -G Ninja \
-                     -DCMAKE_INSTALL_PREFIX=/usr/${_target} \
+    MSYS2_ARG_CONV_EXCL='-DCMAKE_INSTALL_PREFIX=' \
+    ${_target}-cmake -B "$srcdir"/${MSYSTEM}-static-${_target} -G Ninja \
+                     -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX}/${_target} \
                      "${common_config[@]}" \
                      -DLIBCXX_ENABLE_SHARED=OFF \
                      -DLIBCXXABI_ENABLE_SHARED=OFF \
                      -DLIBUNWIND_ENABLE_SHARED=OFF
-    ninja -C "$srcdir"/static-${_target} unwind cxxabi cxx cxx_experimental
+    ninja -C "$srcdir"/${MSYSTEM}-static-${_target} unwind cxxabi cxx cxx_experimental
 
     echo "Building shared libs for ${_target}"
 
-    ${_target}-cmake -B "$srcdir"/shared-${_target} -G Ninja \
-                     -DCMAKE_INSTALL_PREFIX=/usr/${_target} \
+    MSYS2_ARG_CONV_EXCL='-DCMAKE_INSTALL_PREFIX=' \
+    ${_target}-cmake -B "$srcdir"/${MSYSTEM}-shared-${_target} -G Ninja \
+                     -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX}/${_target} \
                      "${common_config[@]}" \
                      -DLIBCXX_ENABLE_STATIC=OFF \
                      -DLIBCXXABI_ENABLE_STATIC=OFF \
                      -DLIBUNWIND_ENABLE_STATIC=OFF
-    ninja -C "$srcdir"/shared-${_target} unwind cxxabi cxx cxx_experimental
+    ninja -C "$srcdir"/${MSYSTEM}-shared-${_target} unwind cxxabi cxx cxx_experimental
   done
 }
 
@@ -138,14 +160,15 @@ build() {
 # accidentally to run this function on the system (!!!)
 package_cygwin-libc++ () {
   pkgdesc='LLVM C++ standard library. (Cygwin) (experimental)'
-  depends=('cygwin-gcc' "cygwin-libc++abi=${pkgver}-${pkgrel}")
+  depends=("${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
+           "${MINGW_PACKAGE_PREFIX}-cygwin-libc++abi=${pkgver}-${pkgrel}")
 
   for _target in ${_targets}; do
     echo "Installing static libc++ for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/static-${_target} install-cxx
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/${MSYSTEM}-static-${_target} install-cxx
 
     echo "Installing shared libc++ for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/shared-${_target} install-cxx
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/${MSYSTEM}-shared-${_target} install-cxx
   done
 
   cd libcxx
@@ -155,14 +178,14 @@ package_cygwin-libc++ () {
 
 package_cygwin-libc++abi() {
   pkgdesc='Low level support for the LLVM C++ standard library. (Cygwin) (experimental)'
-  depends=("cygwin-llvm-libunwind=${pkgver}-${pkgrel}")
+  depends=("${MINGW_PACKAGE_PREFIX}-cygwin-llvm-libunwind=${pkgver}-${pkgrel}")
 
   for _target in ${_targets}; do
     echo "Installing static libc++abi for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/static-${_target} install-cxxabi
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/${MSYSTEM}-static-${_target} install-cxxabi
 
     echo "Installing shared libc++abi for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/shared-${_target} install-cxxabi
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/${MSYSTEM}-shared-${_target} install-cxxabi
   done
 
   cd libcxxabi
@@ -175,12 +198,23 @@ package_cygwin-llvm-libunwind() {
 
   for _target in ${_targets}; do
     echo "Installing static libunwind for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/static-${_target} install-unwind
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/${MSYSTEM}-static-${_target} install-unwind
 
     echo "Installing shared libunwind for ${_target}"
-    DESTDIR="$pkgdir" ninja -C "$srcdir"/shared-${_target} install-unwind
+    DESTDIR="$pkgdir" ninja -C "$srcdir"/${MSYSTEM}-shared-${_target} install-unwind
   done
 
   cd libunwind
   install -Dm0644 LICENSE.TXT "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
 }
+
+# template start; name=mingw-w64-splitpkg-wrappers; version=1.0;
+# vim: set ft=bash :
+
+# generate wrappers
+for _name in "${pkgname[@]}"; do
+  _short="package_${_name#${MINGW_PACKAGE_PREFIX}-}"
+  _func="$(declare -f "${_short}")"
+  eval "${_func/#${_short}/package_${_name}}"
+done
+# template end;
