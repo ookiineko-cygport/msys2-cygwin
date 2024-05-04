@@ -1,15 +1,17 @@
-pkgname=cygwin-environment
+pkgbase=mingw-w64-cygwin-environment
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-environment"
 pkgver=1
 pkgrel=1
 pkgdesc="Script providing common environment variables and functions for Cygwin"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="http://fedoraproject.org/wiki/MinGW"
 license=('BSD')
-groups=('cygwin-toolchain')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
 source=(cygwin-env.sh)
 md5sums=('SKIP')
 
 package() {
-  install -d "$pkgdir"/usr/bin
-  install -m 755 cygwin-env.sh "$pkgdir"/usr/bin/cygwin-env
+  install -d "${pkgdir}${MINGW_PREFIX}"/bin
+  install -m 755 cygwin-env.sh "${pkgdir}${MINGW_PREFIX}"/bin/cygwin-env
 }
