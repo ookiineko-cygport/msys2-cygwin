@@ -1,7 +1,7 @@
 pkgbase=mingw-w64-cygwin-gcc
 pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
 pkgver=11.4.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Cross GCC for the Cygwin cross-compiler"
 arch=('any')
 mingw_arch=('mingw64')
@@ -103,7 +103,8 @@ build() {
         --with-system-zlib --enable-cloog-backend=isl \
         --enable-lto --enable-libgomp --disable-libssp \
         --disable-multilib --disable-symvers \
-        --disable-win32-registry --with-dwarf2
+        --disable-win32-registry --with-dwarf2 \
+        --with-gnu-as --with-gnu-ld
     make
   done
 }
