@@ -1,0 +1,20 @@
+--- cygwin-ldd.py.orig	2024-05-04 08:13:31.845484900 +0800
++++ cygwin-ldd.py	2024-05-04 08:15:16.067327700 +0800
+@@ -19,7 +19,7 @@
+ def dep_tree(target, root, prefix=None):
+     if not prefix:
+         #print('Target =', target)
+-        prefix = '/usr/'+target+'/bin'
++        prefix = os.environ['MINGW_PREFIX']+'/'+target+'/bin'
+         #print('Using default prefix', prefix)
+     dep_dlls = dict()
+ 
+@@ -41,6 +41,8 @@
+ if __name__ == '__main__':
+     if not (m := re.match('^(.*)-ldd$', os.path.basename(sys.argv[0]))):
+         raise ValueError('executable must be named ${TARGET}-ldd')
++    if not os.environ['MINGW_PREFIX']:
++        raise TypeError('not running inside MSYS2 MINGW terminal')
+     arch = m.groups()[0]
+     filename = sys.argv[1]
+     for dll, full_path in dep_tree(arch, filename).items():

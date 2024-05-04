@@ -1,23 +1,31 @@
-pkgname=cygwin-ldd
+pkgbase=mingw-w64-cygwin-ldd
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-ldd"
 pkgver=1
 pkgrel=1
 pkgdesc="Tool to list dependencies of a DLL (Cygwin)"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://github.com/xantares/mingw-ldd"
 license=('WTFPL')
-groups=('cygwin-toolchain')
-depends=('python-pefile')
-source=("https://github.com/ookiineko-cygport/cygwin-ldd/raw/master/cygwin-ldd.py")
-md5sums=('SKIP')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-python-pefile")
+source=("https://github.com/ookiineko-cygport/cygwin-ldd/raw/master/cygwin-ldd.py"
+        sysroot.patch)
+sha256sums=('SKIP'
+            '40804667d608922e64309fcf7310229b1c652f60c07524bc212498da629fbde1')
 
 _targets="x86_64-pc-cygwin"
 
+prepare() {
+  patch -Np0 -i ../sysroot.patch
+}
+
 package() {
-  install -d "$pkgdir"/usr/bin
-  install -d "$pkgdir"/usr/share/cygwin
-  install -m 755 cygwin-ldd.py "$pkgdir"/usr/share/cygwin/
+  install -d "${pkgdir}${MINGW_PREFIX}"/bin
+  install -d "${pkgdir}${MINGW_PREFIX}"/share/cygwin
+  install -m 755 cygwin-ldd.py "${pkgdir}${MINGW_PREFIX}"/share/cygwin/
   for _target in ${_targets}; do
-    cd "$pkgdir"/usr/bin
+    cd "${pkgdir}${MINGW_PREFIX}"/bin
     ln -s ../share/cygwin/cygwin-ldd.py ${_target}-ldd
   done
 }
