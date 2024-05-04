@@ -1,17 +1,31 @@
-pkgname=cygwin-xclang
+pkgbase=mingw-w64-cygwin-xclang
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-xclang"
 pkgver=15.0.7
 pkgrel=3
 pkgdesc="Cross Clang for the Cygwin cross-compiler (experimental)"
-arch=('x86_64')
+arch=('any')
+mingw_arch=('mingw64')
 url="https://llvm.org/"
+msys2_references=('cpe: cpe:/a:llvm:llvm')
 license=('custom:Apache 2.0 with LLVM Exception')
-groups=('cygwin-toolchain')
-depends=('gcc-libs' 'zlib' 'zstd' 'libxml2' 'libedit' 'ncurses' 'python'
-         'cygwin' 'cygwin-w32api-runtime' 'cygwin-w32api-headers'
-         'cygwin-gcc' 'cygwin-binutils' 'cygwin-default-manifest')
-makedepends=('cmake' 'ninja')
-optdepends=('cygwin-compiler-rt: compiler-rt support'
-            'cygwin-libc++: libc++ support')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs"
+         "${MINGW_PACKAGE_PREFIX}-zlib"
+         "${MINGW_PACKAGE_PREFIX}-zstd"
+         "${MINGW_PACKAGE_PREFIX}-libxml2"
+#        "${MINGW_PACKAGE_PREFIX}-libedit"
+         "${MINGW_PACKAGE_PREFIX}-ncurses"
+         "${MINGW_PACKAGE_PREFIX}-python"
+         "${MINGW_PACKAGE_PREFIX}-cygwin"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-w32api-runtime"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-w32api-headers"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-binutils"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-default-manifest")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cmake"
+             "${MINGW_PACKAGE_PREFIX}-ninja")
+optdepends=("${MINGW_PACKAGE_PREFIX}-cygwin-compiler-rt: compiler-rt support"
+            "${MINGW_PACKAGE_PREFIX}-cygwin-libc++: libc++ support")
 options=('!lto' '!debug') # https://github.com/llvm/llvm-project/issues/57740
 source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/llvm-${pkgver}.src.tar.xz"
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/clang-${pkgver}.src.tar.xz"
@@ -30,7 +44,15 @@ source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver
         clang-cygwin-dllimport.patch
         clang-cygwin-cxx-template.patch
         clang-cygwin-cxx-vtable.patch
-        clang-cygming-emutls.patch)
+        clang-cygming-emutls.patch
+        mingw-llvm-0001-Fix-GetHostTriple-for-mingw-w64-in-msys.patch
+        mingw-llvm-0002-Revert-CMake-try-creating-symlink-first-on-windows.patch
+        mingw-llvm-0003-add-pthread-as-system-lib-for-mingw.patch
+        "https://github.com/llvm/llvm-project/commit/dcbf61b3520ed7157688a269ad4dfa8545a00f79.patch"
+        "https://github.com/llvm/llvm-project/commit/a1e80c69223a091e6f0fc84df33a464604c8bbc1.patch"
+        clang.bat
+        clang++.bat)
+noextract=("clang-${pkgver}.src.tar.xz")
 sha256sums=('4ad8b2cc8003c86d0078d15d987d84e3a739f24aae9033865c027abae93ee7a4'
             'a6b673ef15377fb46062d164e8ddc4d05c348ff8968f015f7f4af03f51000067'
             '8986f29b634fdaa9862eedda78513969fe9788301c9f2d938f4c10a3e7a3e7ea'
@@ -48,14 +70,28 @@ sha256sums=('4ad8b2cc8003c86d0078d15d987d84e3a739f24aae9033865c027abae93ee7a4'
             '1b9e97ffa1734019a667a9e4a1b6a780442ed528f8de7e53626ce07b53621807'
             '96751625970d5e0a4360e23276688374e6546bffb9755f9624e9dbd519b2b870'
             '06b93d2130bf6e6b4130890212e25ec368d0c4c5cef5cf19ba5f793d6d462233'
-            'd2354cc4e97c589f28a410ea44a3bb9f6210367de18d99e3880115c136611acb')
+            'd2354cc4e97c589f28a410ea44a3bb9f6210367de18d99e3880115c136611acb'
+            'eb03df53671df6627768141b3aaa76abe176a14e5e47911c97bec544387c4aff'
+            '5754c357cfc17769e80d95b673d41b1e54616e2487e037d761a1ac8bb28a2849'
+            '7f0c64cd87b61e894be632f180ae5291e1aa9f1d9d382608f659067eeeda7146'
+            '341d0144e7b1515104110551c24fff175c70d7f477b9ecfddfbaf9992cff9cc2'
+            '8f66fff2d96b76c9e522bb3a9f4929a104bede17206c79841840add78436f2ae'
+            'SKIP'
+            'SKIP')
 
 _targets="x86_64-pc-cygwin"
 
 prepare() {
-  ln -sf llvm-${pkgver}.src llvm
-  ln -sf clang-${pkgver}.src clang
-  ln -sf cmake-${pkgver}.src cmake
+  echo 'Extracting clang tarball'
+  MSYS=winsymlinks:native \
+  tar -xf clang-${pkgver}.src.tar.xz
+
+  [[ -e llvm ]] && rm -rf llvm
+  [[ -e clang ]] && rm -rf clang
+  [[ -e cmake ]] && rm -rf cmake
+  mv llvm-${pkgver}.src llvm
+  mv clang-${pkgver}.src clang
+  mv cmake-${pkgver}.src cmake
 
   # remove files created by patch
   rm -f clang/lib/Driver/ToolChains/Cygwin.{cpp,h}
@@ -71,6 +107,13 @@ prepare() {
   patch -p2 -i ../clang-cygwin-cxx-template.patch
   patch -p2 -i ../clang-cygwin-cxx-vtable.patch
   patch -p2 -i ../clang-cygming-emutls.patch
+
+  # fixup symlinks
+  for _symlink in $(find -type l); do
+    _dest="$(readlink "$_symlink")"
+    unlink "$_symlink"
+    ln -s "$_dest" "$_symlink"
+  done
   popd
 
   cd llvm
@@ -79,13 +122,24 @@ prepare() {
   patch -p2 -i ../llvm-cygwin-dllimport.patch
   patch -p1 -i ../llvm-cygming-visibility.patch
   patch -p2 -i ../llvm-cygwin-visibility.patch
+
+  patch -p1 -i ../mingw-llvm-0001-Fix-GetHostTriple-for-mingw-w64-in-msys.patch
+  patch -p1 -i ../mingw-llvm-0002-Revert-CMake-try-creating-symlink-first-on-windows.patch
+  patch -p1 -i ../mingw-llvm-0003-add-pthread-as-system-lib-for-mingw.patch
+
+  # https://github.com/llvm/llvm-project/issues/55023#issuecomment-1320967497
+  patch -p2 -i ../dcbf61b3520ed7157688a269ad4dfa8545a00f79.patch
+
+  # https://github.com/msys2/MINGW-packages/issues/15695
+  patch -p2 -l -i ../a1e80c69223a091e6f0fc84df33a464604c8bbc1.patch
 }
 
 build() {
   cd llvm
-  cmake -B build -G Ninja \
+  MSYS2_ARG_CONV_EXCL='-DCMAKE_INSTALL_PREFIX=' \
+  cmake -B build-${MSYSTEM} -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/opt/cygwin-llvm \
+        -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX}/lib/cygwin-llvm \
         -DENABLE_LINKER_BUILD_ID=ON \
         -DLLVM_BUILD_LLVM_DYLIB=ON \
         -DLLVM_LINK_LLVM_DYLIB=ON \
@@ -100,28 +154,28 @@ build() {
         -DCLANG_LINK_CLANG_DYLIB=ON \
         -DCLANG_INCLUDE_TESTS=OFF \
         -DCLANG_INCLUDE_DOCS=OFF
-  ninja -C build
+  ninja -C build-${MSYSTEM}
 }
 
 package() {
-  DESTDIR="$pkgdir" ninja -C llvm/build install
+  DESTDIR="$pkgdir" ninja -C llvm/build-${MSYSTEM} install
 
-  install -Dm755 llvm/build/bin/llvm-config "$pkgdir"/opt/cygwin-llvm/bin/
+  install -Dm755 llvm/build-${MSYSTEM}/bin/llvm-config.exe "${pkgdir}${MINGW_PREFIX}"/lib/cygwin-llvm/bin/
 
-  mkdir -p "$pkgdir"/usr/bin
+  mkdir -p "${pkgdir}${MINGW_PREFIX}"/bin
   for _target in ${_targets}; do
-    ln -sf /opt/cygwin-llvm/bin/clang "$pkgdir"/usr/bin/${_target}-clang
-    ln -sf /opt/cygwin-llvm/bin/clang++ "$pkgdir"/usr/bin/${_target}-clang++
+    sed "s|@PROCESSOR@|${_target::-10}|g" "$srcdir"/clang.bat > "${pkgdir}${MINGW_PREFIX}"/bin/${_target}-clang.bat
+    sed "s|@PROCESSOR@|${_target::-10}|g" "$srcdir"/clang++.bat > "${pkgdir}${MINGW_PREFIX}"/bin/${_target}-clang++.bat
   done
 
   install -Dm644 llvm/LICENSE.TXT "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
 
   # remove unnecessary files
-  cd "$pkgdir"/opt/cygwin-llvm
+  cd "${pkgdir}${MINGW_PREFIX}"/lib/cygwin-llvm
   rm -rf share include libexec lib/cmake
   find lib -maxdepth 1 -type f -name \*.a -delete
   cd bin
-  find -maxdepth 1 \( -type f -o -type l \) \( -name llvm-\* -a ! -name llvm-config -delete \)
-  rm -f c-index-test diagtool clang-check clang-extdef-mapping clang-format \
-        clang-offload-bundler clang-refactor clang-rename clang-scan-deps
+  find -maxdepth 1 \( -type f -o -type l \) \( -name llvm-\*.exe -a ! -name llvm-config.exe -delete \)
+  rm -f c-index-test.exe diagtool.exe clang-check.exe clang-extdef-mapping.exe clang-format.exe \
+        clang-offload-bundler.exe clang-refactor.exe clang-rename.exe clang-scan-deps.exe
 }
