@@ -5,7 +5,7 @@ set (CMAKE_LEGACY_CYGWIN_WIN32 0)
 # cross compiler names is inherited from environment
 
 # where is the target environment
-set (CMAKE_FIND_ROOT_PATH /usr/@TRIPLE@)
+set (CMAKE_FIND_ROOT_PATH $ENV{MINGW_PREFIX}/@TRIPLE@)
 
 # search for programs in the build host directories
 set (CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
@@ -15,7 +15,7 @@ set (CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set (CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # Make sure protoc version matches the library
-set (Protobuf_PROTOC_EXECUTABLE /usr/bin/cygwin-protoc)
+set (Protobuf_PROTOC_EXECUTABLE $ENV{MINGW_PREFIX}/bin/cygwin-protoc.exe)
 
 # set the resource compiler (RHBZ #652435)
 set (CMAKE_RC_COMPILER @TRIPLE@-windres)

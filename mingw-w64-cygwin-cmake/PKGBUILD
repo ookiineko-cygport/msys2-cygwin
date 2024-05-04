@@ -1,14 +1,19 @@
-pkgname=cygwin-cmake
+pkgbase=mingw-w64-cygwin-cmake
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-cmake"
 pkgver=1
 pkgrel=3
 pkgdesc="CMake wrapper for Cygwin"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="http://fedoraproject.org/wiki/MinGW"
 license=('GPL')
-groups=('cygwin-toolchain')
-depends=('cmake' 'cygwin-gcc' 'cygwin-pkg-config' 'cygwin-environment')
-optdepends=('cygwin-wine: runtime support'
-            'cygwin-protobuf: protoc support')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-cmake"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-pkg-config"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-environment")
+optdepends=("${MINGW_PACKAGE_PREFIX}-cygwin-wrapper: runtime support"
+            "${MINGW_PACKAGE_PREFIX}-cygwin-protobuf: protoc support")
 source=(cygwin-cmake.sh
         toolchain-cygwin.cmake)
 md5sums=('SKIP' 'SKIP')
@@ -23,10 +28,10 @@ build() {
 }
 
 package() {
-  install -d "$pkgdir"/usr/bin
-  install -d "$pkgdir"/usr/share/cygwin
+  install -d "${pkgdir}${MINGW_PREFIX}"/bin
+  install -d "${pkgdir}${MINGW_PREFIX}"/share/cygwin
   for _target in ${_targets}; do
-    install -m 644 toolchain-${_target}.cmake "$pkgdir"/usr/share/cygwin/
-    install -m 755 ${_target}-cmake "$pkgdir"/usr/bin/
+    install -m 644 toolchain-${_target}.cmake "${pkgdir}${MINGW_PREFIX}"/share/cygwin/
+    install -m 755 ${_target}-cmake "${pkgdir}${MINGW_PREFIX}"/bin/
   done
 }
