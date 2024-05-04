@@ -1,12 +1,16 @@
-pkgname=cygwin-configure
+pkgbase=mingw-w64-cygwin-configure
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-configure"
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="configure wrapper for Cygwin"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="http://fedoraproject.org/wiki/MinGW"
 license=('GPL')
-groups=('cygwin-toolchain')
-depends=('cygwin-gcc' 'cygwin-pkg-config' 'cygwin-environment')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-pkg-config"
+         "${MINGW_PACKAGE_PREFIX}-cygwin-environment")
 source=(cygwin-configure.sh)
 md5sums=('SKIP')
 
@@ -19,8 +23,8 @@ build() {
 }
 
 package() {
-  install -d "$pkgdir"/usr/bin
+  install -d "${pkgdir}${MINGW_PREFIX}"/bin
   for _target in ${_targets}; do
-    install -m 755 ${_target}-configure "$pkgdir"/usr/bin/
+    install -m 755 ${_target}-configure "${pkgdir}${MINGW_PREFIX}"/bin/
   done
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. /usr/bin/cygwin-env @TRIPLE@
+. ${MINGW_PREFIX}/bin/cygwin-env @TRIPLE@
 
 # check if last arg is a path to configure, else use parent
 for last; do true; done
@@ -12,5 +12,5 @@ fi
 
 ${config_path}/configure \
   --host=@TRIPLE@ --target=@TRIPLE@ --build="$CHOST" \
-  --prefix=/usr/@TRIPLE@ --libdir=/usr/@TRIPLE@/lib --includedir=/usr/@TRIPLE@/include \
+  --prefix=${MINGW_PREFIX}/@TRIPLE@ --libdir=${MINGW_PREFIX}/@TRIPLE@/lib --includedir=${MINGW_PREFIX}/@TRIPLE@/include \
   --enable-shared --enable-static "$@"
