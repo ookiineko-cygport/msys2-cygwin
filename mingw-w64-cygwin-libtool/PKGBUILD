@@ -1,26 +1,40 @@
 # NOTE: requires rebuilt with each new gcc version
 
-pkgname=cygwin-libtool
+pkgbase=mingw-w64-cygwin-libtool
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-libtool"
 pkgver=2.4.7
 pkgrel=1
 pkgdesc="A generic library support script (Cygwin)"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://www.gnu.org/software/libtool"
+msys2_references=('cpe: cpe:/a:gnu:libtool')
 license=('GPL')
-groups=('cygwin-toolchain')
-depends=('sh' 'tar' 'cygwin')
-makedepends=('cygwin-configure' 'help2man')
-conflicts=('cygwin-libltdl')
-provides=('cygwin-libltdl')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=('sh' 'tar' "${MINGW_PACKAGE_PREFIX}-cygwin")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-configure" 'help2man')
+conflicts=("${MINGW_PACKAGE_PREFIX}-cygwin-libltdl")
+provides=("${MINGW_PACKAGE_PREFIX}-cygwin-libltdl")
 options=('!strip' 'staticlibs' '!libtool' '!buildflags')
+# XXX: MSYS2 sets these in /etc/makepkg_mingw.conf
+unset CC CXX
+# XXX: MSYS2 might set these in /etc/profile
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH
 source=("https://ftp.gnu.org/gnu/libtool/libtool-${pkgver}.tar.xz"
         cygming-pass-ld-flags.patch
         cygming-fix-seems-to-be-moved.patch
-        cygming-pick-up-clang-rt.patch)
+        cygming-pick-up-clang-rt.patch
+        mingw-0006-Fix-strict-ansi-vs-posix.patch
+        mingw-0007-fix-cr-for-awk-in-configure.all.patch
+        mingw-0010-libtool-2.4.2-include-process-h.patch
+)
 sha256sums=('4f7f217f057ce655ff22559ad221a0fd8ef84ad1fc5fcb6990cecc333aa1635d'
             '800f929efe2445271cf1c58501969bb9bee87a3114528498e61e389c2960351c'
             'dc39fbe066958178f96108f07db62b48b9339efddf2c21f800ff8d67110ca393'
-            '06d1a4bf88cc02bcc175b150b843541b8ee4627cc571651548f1f2dbe5ed6d5c')
+            '06d1a4bf88cc02bcc175b150b843541b8ee4627cc571651548f1f2dbe5ed6d5c'
+            '6a94ada08b0a0aa36240efd9ccb826e22ab94ef0969270f2edb8be344dc8c62b'
+            'd96beecfc5d15f94ce46bbe0e89d6e6fdb973a25ad6be98c30504b58453792c1'
+            '0f3defa657d353b9f55469f6d514abd96494ce7459ef76bbd63980d8994cafe9')
 
 _targets="x86_64-pc-cygwin"
 
@@ -29,15 +43,19 @@ prepare() {
   patch -p2 -i ../cygming-pass-ld-flags.patch
   patch -p1 -i ../cygming-fix-seems-to-be-moved.patch
   patch -p2 -i ../cygming-pick-up-clang-rt.patch
+
+  patch -p1 -i ../mingw-0006-Fix-strict-ansi-vs-posix.patch
+  patch -p1 -i ../mingw-0007-fix-cr-for-awk-in-configure.all.patch
+  patch -p1 -i ../mingw-0010-libtool-2.4.2-include-process-h.patch
 }
 
 build() {
   cd "$srcdir"/libtool-${pkgver}
   for _target in ${_targets}; do
     echo "Building for ${_target}"
-    mkdir -p build-${_target} && pushd build-${_target}
+    mkdir -p build-${MSYSTEM}-${_target} && pushd build-${MSYSTEM}-${_target}
     ${_target}-configure \
-    lt_cv_sys_lib_dlsearch_path_spec="/usr/${_target}/lib"
+    lt_cv_sys_lib_dlsearch_path_spec="${MINGW_PREFIX}/${_target}/lib"
     make
     popd
   done
@@ -47,16 +65,16 @@ package() {
   cd "$srcdir"/libtool-${pkgver}
   for _target in ${_targets}; do
     echo "Installing for ${_target}"
-    pushd build-${_target}
+    pushd build-${MSYSTEM}-${_target}
     make DESTDIR="$pkgdir" install
-    ${_target}-strip --strip-unneeded "$pkgdir"/usr/${_target}/bin/*.dll
-    ${_target}-strip -g "$pkgdir"/usr/${_target}/lib/*.a
+    ${_target}-strip --strip-unneeded "${pkgdir}${MINGW_PREFIX}"/${_target}/bin/*.dll
+    ${_target}-strip -g "${pkgdir}${MINGW_PREFIX}"/${_target}/lib/*.a
 
     # remove unnecessary files
-    rm -rf "$pkgdir"/usr/${_target}/share/man
+    rm -rf "${pkgdir}${MINGW_PREFIX}"/${_target}/share/man
 
     # remove dir file
-    rm -rf "$pkgdir"/usr/${_target}/share/info/dir
+    rm -rf "${pkgdir}${MINGW_PREFIX}"/${_target}/share/info/dir
     popd
   done
 }
