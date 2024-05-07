@@ -1,25 +1,41 @@
-pkgname=cygwin-ncurses
+pkgbase=mingw-w64-cygwin-ncurses
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-ncurses"
 pkgver=6.5_20240427
 pkgrel=1
 pkgdesc="System V Release 4.0 curses emulation library (Cygwin)"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://invisible-island.net/ncurses/ncurses.html"
+msys2_references=('cpe: cpe:/a:gnu:ncurses'
+                  'cpe: cpe:/a:ncurses_project:ncurses')
 license=('MIT')
-groups=('cygwin-toolchain')
-depends=('cygwin' 'cygwin-gcc')
-makedepends=('autoconf-archive' 'ncurses' 'cygwin-libtool' 'cygwin-configure')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-cygwin" "${MINGW_PACKAGE_PREFIX}-cygwin-gcc")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-autotools"
+             "${MINGW_PACKAGE_PREFIX}-ncurses"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-libtool"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-configure")
 optdepends=('bash: for ncursesw6-config')
 options=('!strip' 'staticlibs' '!libtool' '!buildflags')
+# XXX: MSYS2 sets these in /etc/makepkg_mingw.conf
+unset CC CXX
+# XXX: MSYS2 might set these in /etc/profile
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH
 source=("https://invisible-mirror.net/archives/ncurses/current/ncurses-${pkgver/_/-}.tgz"
         ncurses-6.3-libs.patch
         ncurses-6.3-pkgconfig.patch
         cygwin-ncurses-abi.patch
-        cygwin-terminfo.patch)
+        cygwin-terminfo.patch
+        mingw-002-ncurses-config-win-paths.patch
+        fix-cross-compiling-on-mingw.patch)
 sha256sums=('abf30fcb0f97706cb3f62703595c561515f6b7c257dce2e3c8dee7d83afdfa76'
             'dc4261b6642058a9df1c0945e2409b24f84673ddc3a665d8a15ed3580e51ee25'
             'b8544a607dfbeffaba2b087f03b57ed1fa81286afca25df65f61b04b5f3b3738'
             'ccc61018e8683b7184625e8a5143e63c3a4c7aaa65df30feb69a81bfc913ca9f'
-            '8a020ec167ac97eebd9c1971e90ddd6a74a7811072875bfdc968c28d6617f34a')
+            '8a020ec167ac97eebd9c1971e90ddd6a74a7811072875bfdc968c28d6617f34a'
+            '5367d8f49aff92884b9daa014502df13e1812f1b7ee1b3a3cb18139f10039408'
+            'e8ac1ef7b601730ab5570101877cbc9048339e99a8d05f457a3b4cd6ce7300c0')
 
 _targets="x86_64-pc-cygwin"
 
@@ -32,8 +48,15 @@ prepare() {
   # do not leak build-time LDFLAGS into the pkgconfig files:
   # https://bugs.archlinux.org/task/68523
   patch -Np1 -i ../ncurses-6.3-pkgconfig.patch
+
+  patch -Np1 -i ../mingw-002-ncurses-config-win-paths.patch
+
+  patch -Np1 -i ../fix-cross-compiling-on-mingw.patch
+
   # NOTE: can't run autoreconf because the autotools setup is custom and ancient
 }
+
+MSYS2_ARG_CONV_EXCL='/usr/share/terminfo'
 
 build() {
   local configure_opts=(
@@ -70,9 +93,9 @@ build() {
   cd ncurses-${pkgver/_/-}
   for _target in ${_targets}; do
     echo "Building for ${_target}"
-    mkdir -p build-${_target} && pushd build-${_target}
+    mkdir -p build-${MSYSTEM}-${_target} && pushd build-${MSYSTEM}-${_target}
     ${_target}-configure \
-        --with-libtool=/usr/${_target}/bin/libtool \
+        --with-libtool=${MINGW_PREFIX}/${_target}/bin/libtool \
         "${configure_opts[@]}"
     # taken from ncurses.cygport
     sed -i -e 's%^\(LIBRARIES[ \t]*=\).*$%\1 ../lib/libncursesw.la ../lib/libticw.la%' ncurses/Makefile
@@ -86,30 +109,18 @@ package() {
 
   for _target in ${_targets}; do
     echo "Installing for ${_target}"
-    (cd build-${_target} && make DESTDIR="$pkgdir" install)
+    (cd build-${MSYSTEM}-${_target} && make DESTDIR="$pkgdir" install)
 
-    find "$pkgdir"/usr/${_target} -name '*.exe' -delete
-    find "$pkgdir"/usr/${_target} -name '*.dll' -exec ${_target}-strip --strip-unneeded {} \;
-    find "$pkgdir"/usr/${_target} -name '*.a' -o -name '*.dll' | xargs ${_target}-strip -g
+    find "${pkgdir}${MINGW_PREFIX}"/${_target} -name '*.exe' -delete
+    find "${pkgdir}${MINGW_PREFIX}"/${_target} -name '*.dll' -exec ${_target}-strip --strip-unneeded {} \;
+    find "${pkgdir}${MINGW_PREFIX}"/${_target} -name '*.a' -o -name '*.dll' | xargs ${_target}-strip -g
 
     # fixup terminfo
-    if [[ ! -d "$pkgdir"/usr/share/cygwin-terminfo ]]; then
-        pushd "$pkgdir"/usr/share/terminfo
-          # cygwin and mingw has case insensitive filesystem, host tic installs it wrongly
-          for _subdir in $(find -maxdepth 1 -type d -name '[0-9a-zA-Z]' -exec basename {} \;); do
-            mv -T "$_subdir" "$(printf '%02x\n' "'${_subdir}'")"
-          done
-        popd
-        mv "$pkgdir"/usr/share/{,cygwin-}terminfo
-    fi
-    rm -rf "$pkgdir"/usr/share/terminfo
-    pushd "$pkgdir"/usr/${_target}
-      mkdir -p share && cd share
-      ln -s /usr/share/cygwin-terminfo/ terminfo
-    popd
+    mkdir -p "${pkgdir}${MINGW_PREFIX}"/${_target}/share
+    mv "$pkgdir"/usr/share/terminfo "${pkgdir}${MINGW_PREFIX}"/${_target}/share/terminfo
 
     # header compatibility
-    pushd "$pkgdir"/usr/${_target}/include
+    pushd "${pkgdir}${MINGW_PREFIX}"/${_target}/include
       for _incdir in ncurses ncursesw; do
         mkdir "$_incdir" && pushd "$_incdir"
           ln -s ../*.h .
@@ -118,7 +129,7 @@ package() {
     popd
 
     # fool packages looking to link to non-wide-character ncurses libraries
-    pushd "$pkgdir"/usr/${_target}/lib
+    pushd "${pkgdir}${MINGW_PREFIX}"/${_target}/lib
       for _f in *.a; do
         ln -s ${_f} ${_f/w/}
       done
@@ -133,10 +144,10 @@ package() {
     popd
 
     # fixup config
-    pushd "$pkgdir"/usr/${_target}/bin
+    pushd "${pkgdir}${MINGW_PREFIX}"/${_target}/bin
       mv ncursesw10-config ncursesw6-config
       sed -i -e 's/echo "10"/echo "6"/' ncursesw6-config
-      sed -i -e "s|echo \"/usr/share/terminfo\"|echo \"/usr/${_target}/share/terminfo\"|g" ncursesw6-config
+      sed -i -e "s|echo \"/usr/share/terminfo\"|echo \"${MINGW_PREFIX}/${_target}/share/terminfo\"|g" ncursesw6-config
       ln -s ncursesw6-config ncurses6-config
     popd
   done
