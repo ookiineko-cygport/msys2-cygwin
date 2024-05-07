@@ -1,7 +1,7 @@
 pkgbase=mingw-w64-cygwin-wrapper
 pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-wrapper"
 pkgver=1
-pkgrel=1
+pkgrel=2
 pkgdesc="Wrapper utility for executing Cygwin program (mingw-w64)"
 arch=('any')
 mingw_arch=('mingw64')
@@ -11,6 +11,7 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-cc")
 _rev="1ce22d246ef6aecc9309c0c995897f8c5557e2a4"
 source=("${url}/raw/${_rev}/msys_mingw_cygexec.c"
         Makefile)
+install=cygwin-wrapper.install
 sha256sums=('60ce7e40454490cb24adf9719d565e427504de85d98f6ec5625fa3b394392df7'
             'SKIP')
 

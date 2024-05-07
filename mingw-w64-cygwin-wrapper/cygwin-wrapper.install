@@ -1,0 +1,5 @@
+post_install() {
+  echo 'For things like ncurses that requires accessing /usr to work,'
+  echo 'you might want to create a native or cygwin symlink for it under the target directory.'
+  echo 'For example you can: cd ${MINGW_PREFIX}/x86_64-pc-cygwin && MSYS=winsymlinks:native ln -s . usr'
+}
