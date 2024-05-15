@@ -1,0 +1,4 @@
+post_install() {
+  echo 'IMPORTANT: To cross-compile: you MUST unset some environments provided by MSYS2 for cross-compiling:'
+  echo '  unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH'
+}
