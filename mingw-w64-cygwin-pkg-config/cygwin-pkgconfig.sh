@@ -15,7 +15,7 @@ export PKG_CONFIG_LIBDIR=${MINGW_PREFIX}/@TRIPLE@/lib/pkgconfig:${MINGW_PREFIX}/
 # Also want to override the standard user defined PKG_CONFIG_PATH with
 # a mingw32msvc specific one.
 # You can use PKG_CONFIG_PATH_CUSTOM to tweak pkg-config behavior further
-export PKG_CONFIG_PATH=${PKG_CONFIG_PATH_CUSTOM}:${PKG_CONFIG_LIBDIR}
+export PKG_CONFIG_PATH=${PKG_CONFIG_PATH_CUSTOM+${PKG_CONFIG_PATH_CUSTOM}:}${PKG_CONFIG_LIBDIR}
 
 # Now just execute pkg-config with the given command line args.
 pkg-config $@
