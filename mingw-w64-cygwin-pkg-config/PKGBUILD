@@ -1,7 +1,7 @@
 pkgbase=mingw-w64-cygwin-pkg-config
 pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-pkg-config"
 pkgver=1
-pkgrel=2
+pkgrel=3
 pkgdesc="Support pkg-config script (does not depend on any particular version of pkg-config). Useful for pkg-config powered cross-compiling with Cygwin, see http://tinyurl.com/pkg-config-cross for more info"
 arch=('any')
 mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
@@ -10,15 +10,17 @@ license=('zlib')
 groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
 depends=("${MINGW_PACKAGE_PREFIX}-pkg-config"
          "${MINGW_PACKAGE_PREFIX}-cygwin")
-source=(cygwin-pkgconfig.sh)
+source=(cygwin-pkgconfig.sh
+        cygwin-pkgconfig.bat)
 install=cygwin-pkg-config.install
-md5sums=('SKIP')
+md5sums=('SKIP' 'SKIP')
 
 _targets="x86_64-pc-cygwin"
 
 build() {
   for _target in ${_targets}; do
     sed "s|@TRIPLE@|${_target}|g" cygwin-pkgconfig.sh > ${_target}-pkg-config
+    sed "s|@TRIPLE@|${_target}|g" cygwin-pkgconfig.bat > ${_target}-pkg-config.bat
   done
 }
 
@@ -27,5 +29,6 @@ package() {
   install -d "${pkgdir}${MINGW_PREFIX}"/bin
   for _target in ${_targets}; do
     install -m755 ${_target}-pkg-config "${pkgdir}${MINGW_PREFIX}"/bin
+    install -m755 ${_target}-pkg-config.bat "${pkgdir}${MINGW_PREFIX}"/bin
   done
 }
