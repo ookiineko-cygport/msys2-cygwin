@@ -1,16 +1,23 @@
-pkgname=cygwin-zlib
+pkgbase=mingw-w64-cygwin-zlib
+pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-zlib"
 pkgver=1.3.1
 pkgrel=1
 pkgdesc="Compression library implementing the deflate compression method found in gzip and PKZIP (Cygwin)"
 arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://www.zlib.net/"
+msys2_references=('cpe: cpe:/a:gnu:zlib' 'cpe: cpe:/a:zlib:zlib')
 license=('zlib')
-groups=('cygwin-toolchain')
-depends=('cygwin')
-makedepends=('cygwin-gcc')
-conflicts=('cygwin-minizip')
-provides=('cygwin-minizip')
+groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
+depends=("${MINGW_PACKAGE_PREFIX}-cygwin")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-gcc")
+conflicts=("${MINGW_PACKAGE_PREFIX}-cygwin-minizip")
+provides=("${MINGW_PACKAGE_PREFIX}-cygwin-minizip")
 options=('!strip' 'staticlibs' '!buildflags')
+# XXX: MSYS2 sets these in /etc/makepkg_mingw.conf
+unset CC CXX
+# XXX: MSYS2 might set these in /etc/profile
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSTEM_INCLUDE_PATH PKG_CONFIG_SYSTEM_LIBRARY_PATH
 source=("https://zlib.net/fossils/zlib-${pkgver}.tar.gz"
         cygwin-configure.patch
         cygming-dllexport.patch)
@@ -23,16 +30,16 @@ _targets="x86_64-pc-cygwin"
 prepare() {
   cd "$srcdir"/zlib-${pkgver}
   patch -Np2 -i ../cygwin-configure.patch
-  patch -Np2 -i ../cygming-dllexport.patch
+  patch -Np2 -i ../cygming-dllexport.patch --binary
 }
 
 build() {
   for _target in ${_targets}; do
     echo "Building for ${_target}"
-    rm -rf build-${_target}
-    cp -r zlib-${pkgver} build-${_target}
-    pushd build-${_target}
-      ./configure --prefix=/usr/${_target} -shared -static
+    rm -rf build-${MSYSTEM}-${_target}
+    cp -r zlib-${pkgver} build-${MSYSTEM}-${_target}
+    pushd build-${MSYSTEM}-${_target}
+      ./configure --prefix=${MINGW_PREFIX}/${_target} -shared -static
       make -f win32/Makefile.gcc \
         CC=${_target}-gcc \
         AR=${_target}-ar \
@@ -48,17 +55,17 @@ build() {
 package() {
   for _target in ${_targets}; do
     echo "Installing for ${_target}"
-    cd "$srcdir"/build-${_target}
-    install -d "$pkgdir"/usr/${_target}/{bin,include,lib}
-    install -m644 -t "$pkgdir"/usr/${_target}/include zlib.h zconf.h
-    install -m644 -t "$pkgdir"/usr/${_target}/lib libz.a libz.dll.a
-    install -m755 -t "$pkgdir"/usr/${_target}/bin cygz.dll
+    cd "$srcdir"/build-${MSYSTEM}-${_target}
+    install -d "${pkgdir}${MINGW_PREFIX}"/${_target}/{bin,include,lib}
+    install -m644 -t "${pkgdir}${MINGW_PREFIX}"/${_target}/include zlib.h zconf.h
+    install -m644 -t "${pkgdir}${MINGW_PREFIX}"/${_target}/lib libz.a libz.dll.a
+    install -m755 -t "${pkgdir}${MINGW_PREFIX}"/${_target}/bin cygz.dll
 
-    install -d "$pkgdir"/usr/${_target}/lib/pkgconfig
-    sed "s,@prefix@,/usr/${_target},;s,@exec_prefix@,\${prefix},;s,@libdir@,\${exec_prefix}/lib,;s,@sharedlibdir@,\${libdir},;s,@includedir@,\${prefix}/include,;s,@VERSION@,${pkgver}," < zlib.pc.in > "$pkgdir"/usr/${_target}/lib/pkgconfig/zlib.pc
+    install -d "${pkgdir}${MINGW_PREFIX}"/${_target}/lib/pkgconfig
+    sed "s,@prefix@,${MINGW_PREFIX}/${_target},;s,@exec_prefix@,\${prefix},;s,@libdir@,\${exec_prefix}/lib,;s,@sharedlibdir@,\${libdir},;s,@includedir@,\${prefix}/include,;s,@VERSION@,${pkgver}," < zlib.pc.in > "${pkgdir}${MINGW_PREFIX}"/${_target}/lib/pkgconfig/zlib.pc
 
-    ${_target}-strip -x -g "$pkgdir"/usr/${_target}/bin/*.dll
-    ${_target}-strip -g "$pkgdir"/usr/${_target}/lib/*.a
+    ${_target}-strip -x -g "${pkgdir}${MINGW_PREFIX}"/${_target}/bin/*.dll
+    ${_target}-strip -g "${pkgdir}${MINGW_PREFIX}"/${_target}/lib/*.a
   done
 
   install -Dm644 "$srcdir"/zlib-${pkgver}/LICENSE -t "$pkgdir"/usr/share/licenses/${pkgname}/
