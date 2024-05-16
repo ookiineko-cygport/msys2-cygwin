@@ -10,7 +10,7 @@
 # When using the mingw32msvc cross compiler tools, the native Linux
 # pkg-config executable works fine as long as the default PKG_CONFIG_LIBDIR
 # is overridden.
-export PKG_CONFIG_LIBDIR=${MINGW_PREFIX}/@TRIPLE@/lib/pkgconfig:${MINGW_PREFIX}/@TRIPLE@/share/pkgconfig
+export PKG_CONFIG_LIBDIR="$(cygpath -u "${MINGW_PREFIX}")/@TRIPLE@/lib/pkgconfig:$(cygpath -u "${MINGW_PREFIX}")/@TRIPLE@/share/pkgconfig"
 
 # Also want to override the standard user defined PKG_CONFIG_PATH with
 # a mingw32msvc specific one.

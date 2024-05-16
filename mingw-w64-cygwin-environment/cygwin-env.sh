@@ -14,6 +14,6 @@ export LDFLAGS="${CYGWIN_LDFLAGS:-$default_cygwin_linker_flags $LDFLAGS}"
 export CC="${CYGWIN_CC:-$_arch-gcc}"
 export CXX="${CYGWIN_CXX:-$_arch-g++}"
 
-cygwin_prefix=${MINGW_PREFIX}/${_arch}
+cygwin_prefix="$(cygpath -u "${MINGW_PREFIX}")/${_arch}"
 export PKG_CONFIG_SYSROOT_DIR="${cygwin_prefix}"
 export PKG_CONFIG_LIBDIR="${cygwin_prefix}/lib/pkgconfig:${cygwin_prefix}/share/pkgconfig"

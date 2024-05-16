@@ -1,7 +1,7 @@
 pkgbase=mingw-w64-cygwin-pkg-config
 pkgname="${MINGW_PACKAGE_PREFIX}-cygwin-pkg-config"
 pkgver=1
-pkgrel=4
+pkgrel=5
 pkgdesc="Support pkg-config script (does not depend on any particular version of pkg-config). Useful for pkg-config powered cross-compiling with Cygwin, see http://tinyurl.com/pkg-config-cross for more info"
 arch=('any')
 mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
