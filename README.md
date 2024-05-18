@@ -1,11 +1,6 @@
 Arch Cygwin
 ===========
 
-> [!NOTE]
->
-> This cross-compiler suite is now also available on MSYS2 (unofficial) via [msys2-cygwin][msys2-cygwin],
-> feel free to check it out if you don't have an archlinux install.
-
 This is an attempt to get a Cygwin cross toolchain on archlinux.
 
 Currently, this repository contains some experimental PKGBUILDs to build a Cygwin cross compiler.
@@ -66,8 +61,6 @@ After that other packages can be built and installed normally ;)
 
 [Cygwin documentation: Building a cross-compiler](https://x.cygwin.com/docs/cg/cross.html)
 
-[Cygwin cross-compilers on MSYS2 (unofficial)](https://github.com/ookiineko-cygport/msys2-cygwin.git)
-
 ## Contributing
 
 Please refer to [ArchWiki: MinGW package guidelines](https://wiki.archlinux.org/title/MinGW_package_guidelines).
@@ -87,6 +80,3 @@ Special thanks to the following external sources where arch-cygwin took referenc
   * [archlinux packaging](https://gitlab.archlinux.org/archlinux/packaging/packages)
 
   * [yselkowitz's Fedora GIT](https://fedorapeople.org/cgit/yselkowitz/)
-
-<!-- References: -->
-[msys2-cygwin]: https://github.com/ookiineko-cygport/msys2-cygwin.git
