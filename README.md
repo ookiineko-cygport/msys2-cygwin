@@ -65,6 +65,8 @@ After that other packages can be built and installed normally ;)
 
 [Cygwin documentation: Building a cross-compiler](https://x.cygwin.com/docs/cg/cross.html)
 
+[Cygwin cross-compilers on Ubuntu / Debian (unofficial)](https://github.com/ookiineko-cygport/deb-cygwin.git)
+
 ## Contributing
 
 Please refer to [ArchWiki: MinGW package guidelines](https://wiki.archlinux.org/title/MinGW_package_guidelines).
