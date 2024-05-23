@@ -4,6 +4,7 @@ pkgname=("${MINGW_PACKAGE_PREFIX}-cygwin-libc++"
          "${MINGW_PACKAGE_PREFIX}-cygwin-llvm-libunwind")
 pkgver=15.0.7
 pkgrel=1
+pkgdesc='LLVM C++ standard library. (Cygwin) (experimental)'
 arch=('any')
 mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang32' 'clang64' 'clangarm64')
 url="https://github.com/llvm/llvm-project/tree/main/libunwind"
@@ -11,7 +12,8 @@ msys2_references=('cpe: cpe:/a:llvm:llvm')
 license=('custom:Apache 2.0 with LLVM Exception')
 groups=("${MINGW_PACKAGE_PREFIX}-cygwin-toolchain")
 depends=("${MINGW_PACKAGE_PREFIX}-cygwin-compiler-rt")
-makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-xclang"
+makedepends=("${MINGW_PACKAGE_PREFIX}-cygwin-compiler-rt"
+             "${MINGW_PACKAGE_PREFIX}-cygwin-xclang"
              "${MINGW_PACKAGE_PREFIX}-cygwin-cmake"
              "${MINGW_PACKAGE_PREFIX}-ninja")
 options=('!strip' 'staticlibs' '!buildflags')
@@ -159,7 +161,6 @@ build() {
 # Do not remove the space before the () or commitpkg will
 # accidentally to run this function on the system (!!!)
 package_cygwin-libc++ () {
-  pkgdesc='LLVM C++ standard library. (Cygwin) (experimental)'
   depends=("${MINGW_PACKAGE_PREFIX}-cygwin-gcc"
            "${MINGW_PACKAGE_PREFIX}-cygwin-libc++abi=${pkgver}-${pkgrel}")
 
